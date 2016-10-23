@@ -26,13 +26,12 @@ def sanitize(obj):
     for k, v in obj.items():
         k = k.upper()
 
-        # Validate the key
-        item_is_valid = (
+        item_is_invalid = (
             not KEY_REGEX.match(k)
             or type(v) is dict
             or k == 'SNAGSBY_SOURCE'
         )
-        if item_is_valid:
+        if item_is_invalid:
             continue
 
         if type(v) is bool:
