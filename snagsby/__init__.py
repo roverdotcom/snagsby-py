@@ -25,4 +25,4 @@ def load_object(obj, dest=None):
     if dest is None:
         dest = os.environ
     for k, v in sanitize(obj).items():
-        dest[k.upper()] = str(v)
+        dest[k.upper()] = v
