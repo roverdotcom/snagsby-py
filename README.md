@@ -1,4 +1,4 @@
-# Snagsby(py)
+# Snagsby(py) [![Build Status](https://travis-ci.org/roverdotcom/snagsby-py.svg?branch=master)](https://travis-ci.org/roverdotcom/snagsby-py)
 
 Python module implementing snagsby - https://github.com/roverdotcom/snagsby
 
