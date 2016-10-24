@@ -1,0 +1,4 @@
+-r requirements.txt
+httpretty==0.8.14
+mock>=1.0.1
+nose
