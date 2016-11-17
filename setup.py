@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import re
 try:
     from setuptools import setup
 except ImportError:
@@ -10,8 +11,11 @@ with open('README.md') as f:
     readme = f.read()
 
 # Load the version in a safe way
-version_data = {}
-execfile('./snagsby/version.py', version_data)
+with open('./snagsby/version.py') as f:
+    version_raw = f.read()
+    regex = re.compile(r'__version__\s*=\s*\'([^\']+)\'')
+    match = regex.match(version_raw)
+    version = match.group(1)
 
 requirements = [
     'boto3>=1.0.0',
@@ -24,7 +28,7 @@ test_requirements = [
 
 setup(
     name='snagsby',
-    version=version_data['__version__'],
+    version=version,
     description='Snagsby for python',
     long_description=readme,
     author='Bryan Shelton',
