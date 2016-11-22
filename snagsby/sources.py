@@ -81,7 +81,7 @@ class S3Source(object):
 
     def get_raw_data(self):
         obj = self.get_s3_object()
-        return json.load(obj['Body'])
+        return json.loads(obj['Body'].read().decode())
 
     def get_data(self):
         return sanitize(self.get_raw_data())
