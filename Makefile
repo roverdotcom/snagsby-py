@@ -9,6 +9,11 @@ docker-test:
 		-w /app \
 		python:2.7 \
 		bash -c "pip install -r requirements-dev.txt && make"
+	docker run --rm \
+		-v $(PWD):/app:ro \
+		-w /app \
+		python:3.5 \
+		bash -c "pip install -r requirements-dev.txt && make"
 
 # Watch python files and run tests
 # https://github.com/joeyespo/pytest-watch

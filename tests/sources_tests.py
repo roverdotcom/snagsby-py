@@ -83,6 +83,15 @@ class S3SourceTests(TestCase):
         out = source.get_data()
         self.assertEqual(out['NO'], '0')
 
+    @patch.object(sources.S3Source, 'get_s3_object_body')
+    def test_json_decoding_in_get_raw_data(self, mock):
+        mock.return_value = b'{"TEST":"VALUE"}'
+        source = sources.S3Source("s3://bucket/file.json")
+        out = source.get_raw_data()
+        self.assertEqual(out, {
+            "TEST": "VALUE",
+        })
+
 
 class ParseSourcesTests(TestCase):
     def test_empty_list(self):
