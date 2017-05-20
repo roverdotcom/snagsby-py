@@ -42,9 +42,25 @@ def sanitize(obj):
     return out
 
 
-class S3Source(object):
-    def __init__(self, url_str):
-        self.url = urlparse(url_str)
+class Source(object):
+    def __init__(self, url):
+        self.url = url
+
+    def get_data(self):
+        return sanitize(self.get_raw_data())
+
+
+class FileSource(Source):
+    scheme = 'file'
+
+    def get_raw_data(self):
+        path = self.url.path
+        with open(path, 'r') as f:
+            return json.load(f)
+
+
+class S3Source(Source):
+    scheme = 's3'
 
     @property
     def bucket(self):
@@ -86,8 +102,11 @@ class S3Source(object):
         obj = self.get_s3_object_body()
         return json.loads(obj.decode())
 
-    def get_data(self):
-        return sanitize(self.get_raw_data())
+
+parser_registry = (
+    S3Source,
+    FileSource,
+)
 
 
 def _parse_sources_str(sources_str):
@@ -97,8 +116,17 @@ def _parse_sources_str(sources_str):
     ]
 
 
+def _parser_factory(source_str):
+    url = urlparse(source_str)
+    for parser in parser_registry:
+        if parser.scheme == url.scheme:
+            return parser(url)
+
+
 def parse_sources(sources_str):
-    return [
-        S3Source(source)
-        for source in _parse_sources_str(sources_str)
-    ]
+    parsed_sources = []
+    for source_str in _parse_sources_str(sources_str):
+        source_instance = _parser_factory(source_str)
+        if source_instance:
+            parsed_sources.append(source_instance)
+    return parsed_sources

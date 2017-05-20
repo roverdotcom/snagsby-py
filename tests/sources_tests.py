@@ -4,6 +4,11 @@ import json
 
 from mock import patch
 
+try:
+    from urlparse import urlparse, parse_qs
+except ImportError:
+    from urllib.parse import urlparse, parse_qs
+
 from snagsby import sources
 
 from . import TestCase
@@ -50,7 +55,7 @@ class SplitSourcesTests(TestCase):
 
 
 class S3SourceTests(TestCase):
-    source = "s3://my-bucket/my/file.json?region=us-west-1"
+    source = urlparse("s3://my-bucket/my/file.json?region=us-west-1")
 
     def test_bucket(self):
         source = sources.S3Source(self.source)
@@ -71,7 +76,7 @@ class S3SourceTests(TestCase):
         self.assertEqual(source.region_name, 'us-west-1')
 
     def test_region_name_helper_none(self):
-        source = sources.S3Source("s3://bucket/file.json")
+        source = sources.S3Source(urlparse("s3://bucket/file.json"))
         self.assertIsNone(source.region_name)
 
     @patch.object(sources.S3Source, 'get_raw_data')
@@ -90,6 +95,30 @@ class S3SourceTests(TestCase):
         out = source.get_raw_data()
         self.assertEqual(out, {
             "TEST": "VALUE",
+        })
+
+
+class FileSourceTests(TestCase):
+    def test_get_raw_data(self):
+        path = self.get_fixture_path('config.json')
+        url = 'file://{}'.format(path)
+        parser = sources.FileSource(urlparse(url))
+        raw = parser.get_raw_data()
+        self.assertEqual(raw, {
+            'environment': 'test',
+            'num': 1,
+            'bool': False,
+        })
+
+    def test_sanitizes_data(self):
+        path = self.get_fixture_path('config.json')
+        url = 'file://{}'.format(path)
+        parser = sources.FileSource(urlparse(url))
+        raw = parser.get_data()
+        self.assertEqual(raw, {
+            'ENVIRONMENT': 'test',
+            'NUM': '1',
+            'BOOL': '0',
         })
 
 

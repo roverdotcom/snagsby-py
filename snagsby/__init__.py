@@ -18,11 +18,11 @@ def load(source=None, dest=None):
 
     for parsed_source in parsed_sources:
         for k, v in parsed_source.get_data().items():
-            dest[k.upper()] = v
+            dest[k] = v
 
 
 def load_object(obj, dest=None):
     if dest is None:
         dest = os.environ
     for k, v in sanitize(obj).items():
-        dest[k.upper()] = v
+        dest[k] = v
