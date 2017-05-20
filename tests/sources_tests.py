@@ -5,9 +5,9 @@ import json
 from mock import patch
 
 try:
-    from urlparse import urlparse, parse_qs
+    from urlparse import urlparse
 except ImportError:
-    from urllib.parse import urlparse, parse_qs
+    from urllib.parse import urlparse
 
 from snagsby import sources
 
@@ -129,6 +129,14 @@ class ParseSourcesTests(TestCase):
     def test_source(self):
         out = sources.parse_sources("s3://my-bucket/file.json")
         self.assertEqual(out[0].bucket, 'my-bucket')
+
+    def test_file_source(self):
+        out = sources.parse_sources(
+            "s3://my-bucket/file.json"
+            " file://home/me/file.json"
+            " s3://another-bucket/file.json"
+        )
+        self.assertIsInstance(out[1], sources.FileSource)
 
 
 class SanitizeTests(TestCase):
