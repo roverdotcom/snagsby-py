@@ -69,16 +69,3 @@ snagsby.load()
 
 print(os.environ['NUM']) => u'7.777'
 ```
-
-It's easy to have snagsby inject into locals()
-
-**settings.py**
-
-```python
-import snagsby
-snagsby.load(dest=locals())
-
-# Values from the snagsby sources were injected into
-# local module variables
-print(WILL_UPCASE)
-```
