@@ -49,6 +49,24 @@ class SplitSourcesTests(TestCase):
         self.assertEqual(out, [])
 
 
+class AWSSourceTests(TestCase):
+    source = "s3://my-bucket/my/file.json?region=us-west-1"
+
+    def test_options(self):
+        source = sources.AWSSource(self.source)
+        self.assertEqual(source.options, {
+            'region': 'us-west-1',
+        })
+
+    def test_region_name_helper(self):
+        source = sources.AWSSource(self.source)
+        self.assertEqual(source.region_name, 'us-west-1')
+
+    def test_region_name_helper_default(self):
+        source = sources.AWSSource("s3://bucket/file.json")
+        self.assertEqual(source.region_name, 'us-west-2')
+
+
 class S3SourceTests(TestCase):
     source = "s3://my-bucket/my/file.json?region=us-west-1"
 
@@ -59,20 +77,6 @@ class S3SourceTests(TestCase):
     def test_key(self):
         source = sources.S3Source(self.source)
         self.assertEqual(source.key, 'my/file.json')
-
-    def test_options(self):
-        source = sources.S3Source(self.source)
-        self.assertEqual(source.options, {
-            'region': 'us-west-1',
-        })
-
-    def test_region_name_helper(self):
-        source = sources.S3Source(self.source)
-        self.assertEqual(source.region_name, 'us-west-1')
-
-    def test_region_name_helper_none(self):
-        source = sources.S3Source("s3://bucket/file.json")
-        self.assertIsNone(source.region_name)
 
     @patch.object(sources.S3Source, 'get_raw_data')
     def test_hi(self, mock):
@@ -92,6 +96,16 @@ class S3SourceTests(TestCase):
             "TEST": "VALUE",
         })
 
+
+class SMSourceTests(TestCase):
+    source = "sm://some/key/path?region=us-west-1"
+
+    @patch.object(sources.SMSource, 'get_sm_response')
+    def test_get_raw_data(self, mock):
+        mock.return_value = {"SecretString": '{"TEST":"VALUE"}' }
+        source = sources.SMSource("sm://some/key/path")
+        out = source.get_raw_data()
+        self.assertEqual(out, {"TEST": "VALUE", })
 
 class ParseSourcesTests(TestCase):
     def test_empty_list(self):
