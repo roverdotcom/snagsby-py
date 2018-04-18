@@ -1,7 +1,8 @@
 from __future__ import absolute_import
 
-import re
 import json
+import logging
+import re
 
 try:
     from urlparse import urlparse, parse_qs
@@ -10,8 +11,10 @@ except ImportError:
 
 
 import boto3
+import botocore
 from botocore.client import Config
 
+logger = logging.getLogger(__name__)
 
 SPLITTER = re.compile(r'[\s|,]+')
 KEY_REGEX = re.compile(r'^\w+$')
@@ -42,17 +45,9 @@ def sanitize(obj):
     return out
 
 
-class S3Source(object):
+class AWSSource(object):
     def __init__(self, url_str):
         self.url = urlparse(url_str)
-
-    @property
-    def bucket(self):
-        return self.url.netloc
-
-    @property
-    def key(self):
-        return self.url.path.lstrip("/")
 
     @property
     def options(self):
@@ -64,6 +59,55 @@ class S3Source(object):
     @property
     def region_name(self):
         return self.options.get('region')
+
+    def get_data(self):
+        return sanitize(self.get_raw_data())
+
+
+class SMSource(AWSSource):
+    def get_sm_response(self):
+        key = "{}{}".format(self.url.netloc, self.url.path)
+        client_opts = {}
+        if self.region_name:
+            client_opts['region_name'] = self.region_name
+        client = boto3.client('secretsmanager', **client_opts)
+
+        try:
+            return client.get_secret_value(SecretId=key)
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == 'ResourceNotFoundException':
+                logger.debug("The requested secret " + key + " was not found")
+            elif e.response['Error']['Code'] == 'InvalidRequestException':
+                logger.error("The request was invalid due to:", e)
+            elif e.response['Error']['Code'] == 'InvalidParameterException':
+                logger.error("The request had invalid params:", e)
+            return {}
+
+    def get_raw_data(self):
+        response = self.get_sm_response()
+        if 'SecretString' in response:
+            try:
+                return json.loads(response['SecretString'])
+            except ValueError as e:
+                return {}
+            except json.decoder.JSONDecodeError as e:
+                return {}
+        else:
+            logger.debug('Response for key {}{} does not contain SecretString'.format(
+                self.url.netloc,
+                self.url.path,
+            ))
+        return {}
+
+
+class S3Source(AWSSource):
+    @property
+    def bucket(self):
+        return self.url.netloc
+
+    @property
+    def key(self):
+        return self.url.path.lstrip("/")
 
     def get_s3_object(self):
         s3_opts = {
@@ -86,9 +130,6 @@ class S3Source(object):
         obj = self.get_s3_object_body()
         return json.loads(obj.decode())
 
-    def get_data(self):
-        return sanitize(self.get_raw_data())
-
 
 def _parse_sources_str(sources_str):
     return [
@@ -97,8 +138,14 @@ def _parse_sources_str(sources_str):
     ]
 
 
+def parse_source(source):
+    if not re.match(r's[m3]:\/\/', source):
+        logger.debug('Sources must start with s3:// or sm://')
+    elif source.startswith('s3://'):
+        return S3Source(source)
+    else:
+        return SMSource(source)
+
+
 def parse_sources(sources_str):
-    return [
-        S3Source(source)
-        for source in _parse_sources_str(sources_str)
-    ]
+    return list(filter(None, [parse_source(source) for source in _parse_sources_str(sources_str)]))

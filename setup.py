@@ -18,12 +18,13 @@ with open('./snagsby/version.py') as f:
     version = match.group(1)
 
 requirements = [
-    'boto3>=1.0.0',
+    'boto3>=1.7',
 ]
 
 test_requirements = [
     'mock>=1.0.1',
     'httpretty==0.8.14',
+    'testfixtures'
 ]
 
 setup(
