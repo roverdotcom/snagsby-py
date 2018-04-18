@@ -9,6 +9,11 @@ from snagsby import sources
 from . import TestCase
 
 
+import logging
+from testfixtures import LogCapture
+from testfixtures import log_capture
+
+
 class SplitSourcesTests(TestCase):
     def test_newline_split(self):
         s = """
@@ -49,6 +54,24 @@ class SplitSourcesTests(TestCase):
         self.assertEqual(out, [])
 
 
+class AWSSourceTests(TestCase):
+    source = "s3://my-bucket/my/file.json?region=us-west-1"
+
+    def test_options(self):
+        source = sources.AWSSource(self.source)
+        self.assertEqual(source.options, {
+            'region': 'us-west-1',
+        })
+
+    def test_region_name_helper(self):
+        source = sources.AWSSource(self.source)
+        self.assertEqual(source.region_name, 'us-west-1')
+
+    def test_region_name_helper_default(self):
+        source = sources.AWSSource("s3://bucket/file.json")
+        self.assertEqual(source.region_name, None)
+
+
 class S3SourceTests(TestCase):
     source = "s3://my-bucket/my/file.json?region=us-west-1"
 
@@ -59,20 +82,6 @@ class S3SourceTests(TestCase):
     def test_key(self):
         source = sources.S3Source(self.source)
         self.assertEqual(source.key, 'my/file.json')
-
-    def test_options(self):
-        source = sources.S3Source(self.source)
-        self.assertEqual(source.options, {
-            'region': 'us-west-1',
-        })
-
-    def test_region_name_helper(self):
-        source = sources.S3Source(self.source)
-        self.assertEqual(source.region_name, 'us-west-1')
-
-    def test_region_name_helper_none(self):
-        source = sources.S3Source("s3://bucket/file.json")
-        self.assertIsNone(source.region_name)
 
     @patch.object(sources.S3Source, 'get_raw_data')
     def test_hi(self, mock):
@@ -93,6 +102,34 @@ class S3SourceTests(TestCase):
         })
 
 
+class SMSourceTests(TestCase):
+    source = "sm://some/key/path?region=us-west-1"
+
+    @patch.object(sources.SMSource, 'get_sm_response')
+    def test_get_raw_data(self, mock):
+        mock.return_value = {"SecretString": '{"TEST":"VALUE"}'}
+        source = sources.SMSource("sm://some/key/path")
+        out = source.get_raw_data()
+        self.assertEqual(out, {"TEST": "VALUE", })
+
+    @patch.object(sources.SMSource, 'get_sm_response')
+    def test_get_raw_data_returns_empty_map_for_invalid_json(self, mock):
+        mock.return_value = {"SecretString": '{"TEST_BROKEN_JSON:"VALUE"}'}
+        source = sources.SMSource("sm://some/key/path")
+        self.assertEqual(source.get_raw_data(), {})
+
+    @patch.object(sources.SMSource, 'get_sm_response')
+    @log_capture()
+    def test_get_raw_data_logs_sources_do_not_have_SecretString(self, l, mock):
+        mock.return_value = {"SecretBinary": '{"TEST":"VALUE"}'}
+        source = sources.SMSource("sm://some/key/path")
+        out = source.get_raw_data()
+        l.check(
+            ('snagsby.sources', 'DEBUG',
+             'Response for key some/key/path does not contain SecretString'),
+        )
+
+
 class ParseSourcesTests(TestCase):
     def test_empty_list(self):
         self.assertEqual(sources.parse_sources(""), [])
@@ -100,6 +137,20 @@ class ParseSourcesTests(TestCase):
     def test_source(self):
         out = sources.parse_sources("s3://my-bucket/file.json")
         self.assertEqual(out[0].bucket, 'my-bucket')
+
+    def test_source_identifies_s3(self):
+        out = sources.parse_sources("s3://my-bucket/file.json")
+        self.assertEqual(type(out[0]).__name__, 'S3Source')
+
+    def test_source_identifies_sm(self):
+        out = sources.parse_sources("sm://my/key/path")
+        self.assertEqual(type(out[0]).__name__, 'SMSource')
+
+    @log_capture()
+    def test_logs_sources_that_are_not_supported(self, l):
+        out = sources.parse_sources("ftp://my-bucket/file.json")
+        l.check(('snagsby.sources', 'DEBUG',
+                 'Sources must start with s3:// or sm://'))
 
 
 class SanitizeTests(TestCase):
