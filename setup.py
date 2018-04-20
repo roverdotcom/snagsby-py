@@ -18,7 +18,7 @@ with open('./snagsby/version.py') as f:
     version = match.group(1)
 
 requirements = [
-    'boto3>=1.0.0',
+    'boto3>=1.7.0',
 ]
 
 test_requirements = [
