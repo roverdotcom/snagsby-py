@@ -152,4 +152,4 @@ def parse_source(source):
 
 
 def parse_sources(sources_str):
-    return list(filter(None, map(parse_source, _parse_sources_str(sources_str))))
+    return list(filter(None, [parse_source(source) for source in _parse_sources_str(sources_str)]))
