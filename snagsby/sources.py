@@ -67,14 +67,11 @@ class AWSSource(object):
 class SMSource(AWSSource):
     def get_sm_response(self):
         key = "{}{}".format(self.url.netloc, self.url.path)
-        session = boto3.session.Session()
-        endpoint_url = "https://secretsmanager.{}.amazonaws.com".format(
-            self.region_name)
-        client = session.client(
-            service_name='secretsmanager',
-            region_name=self.region_name,
-            endpoint_url=endpoint_url
-        )
+
+        client_opts = {}
+        if self.region_name:
+            client_opts['region_name'] = self.region_name
+        client = boto3.client('secretsmanager', **client_opts)
 
         try:
             return client.get_secret_value(SecretId=key)
