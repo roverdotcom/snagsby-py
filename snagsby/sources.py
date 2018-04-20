@@ -58,16 +58,18 @@ class AWSSource(object):
 
     @property
     def region_name(self):
-        return self.options.get('region', 'us-west-2')
+        return self.options.get('region')
 
     def get_data(self):
         return sanitize(self.get_raw_data())
+
 
 class SMSource(AWSSource):
     def get_sm_response(self):
         key = "{}{}".format(self.url.netloc, self.url.path)
         session = boto3.session.Session()
-        endpoint_url = "https://secretsmanager.{}.amazonaws.com".format(self.region_name)
+        endpoint_url = "https://secretsmanager.{}.amazonaws.com".format(
+            self.region_name)
         client = session.client(
             service_name='secretsmanager',
             region_name=self.region_name,
@@ -75,7 +77,7 @@ class SMSource(AWSSource):
         )
 
         try:
-            return client.get_secret_value( SecretId=key )
+            return client.get_secret_value(SecretId=key)
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == 'ResourceNotFoundException':
                 logger.debug("The requested secret " + key + " was not found")
@@ -90,13 +92,17 @@ class SMSource(AWSSource):
         if 'SecretString' in response:
             try:
                 return json.loads(response['SecretString'])
+            except ValueError as e:
+                return {}
             except json.decoder.JSONDecodeError as e:
                 return {}
-        logger.debug('Response {}{} does not contain SecretString'.format(
-            self.url.netloc,
-            self.url.path,
-        ))
+        else:
+            logger.debug('Response for key {}{} does not contain SecretString'.format(
+                self.url.netloc,
+                self.url.path,
+            ))
         return {}
+
 
 class S3Source(AWSSource):
     @property
@@ -129,12 +135,12 @@ class S3Source(AWSSource):
         return json.loads(obj.decode())
 
 
-
 def _parse_sources_str(sources_str):
     return [
         source.lstrip().rstrip()
         for source in SPLITTER.split(sources_str) if source
     ]
+
 
 def parse_source(source):
     if not re.match(r's[m3]:\/\/', source):
@@ -143,6 +149,7 @@ def parse_source(source):
         return S3Source(source)
     else:
         return SMSource(source)
+
 
 def parse_sources(sources_str):
     return list(filter(None, map(parse_source, _parse_sources_str(sources_str))))
