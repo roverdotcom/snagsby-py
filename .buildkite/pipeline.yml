@@ -1,0 +1,15 @@
+steps:
+  - command: make docker-test
+    label: "Run :python: tests"
+
+
+  - wait
+
+  - command: python setup.py sdist
+    label: "Build Source Dist :package:"
+
+  - wait
+
+  - command: .buildkite/steps/publish_to_gemfury.sh
+    label: "Publish to Gemfury :gem:"
+
