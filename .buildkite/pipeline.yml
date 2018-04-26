@@ -7,6 +7,7 @@ steps:
 
   - command: python setup.py sdist
     label: "Build Source Dist :package:"
+    artifact_paths: 'dist/*.tar.gz'
 
   - wait
 
