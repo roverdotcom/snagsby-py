@@ -1,0 +1,2 @@
+class InvalidFormatterError(StandardError):
+    pass
