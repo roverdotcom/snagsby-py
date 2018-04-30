@@ -23,7 +23,7 @@ class SnagsbyCli(object):
 
     def main(self, args):
         data = self.get_data(args['source'])
-        sys.stdout.write(get_formatter(args['format'], data).get_output())
+        sys.stdout.write(get_formatter(args['output'], data).get_output())
         sys.stdout.flush()
         return 0
 
@@ -32,7 +32,7 @@ def main():
     parser = argparse.ArgumentParser(description='Snagsby')
     parser.add_argument('-v', '--version', action='version',
                         version='snagsby-py: {}'.format(__version__))
-    parser.add_argument('--format', default=DEFAULT_FORMATTER,
+    parser.add_argument('-o', '--output', default=DEFAULT_FORMATTER,
                         choices=FORMATTERS_REGSITRY.keys())
     parser.add_argument('-s', '--source', action='append')
     parsed_args = parser.parse_args()
