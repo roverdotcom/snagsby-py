@@ -1,2 +1,2 @@
-class InvalidFormatterError(StandardError):
+class InvalidFormatterError(Exception):
     pass
