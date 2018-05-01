@@ -35,9 +35,8 @@ def main():
                         version='snagsby-py: {}'.format(__version__))
     parser.add_argument('-o', '--output', default=DEFAULT_FORMATTER,
                         choices=FORMATTERS_REGSITRY.keys())
-    parsed_args = parser.parse_args()
     cli = SnagsbyCli()
-    sys.exit(cli.main(vars(parsed_args)))
+    sys.exit(cli.main(vars(parser.parse_args())))
 
 
 if __name__ == '__main__':
