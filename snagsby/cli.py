@@ -30,11 +30,11 @@ class SnagsbyCli(object):
 
 def main():
     parser = argparse.ArgumentParser(description='Snagsby')
+    parser.add_argument('source', nargs='*')
     parser.add_argument('-v', '--version', action='version',
                         version='snagsby-py: {}'.format(__version__))
     parser.add_argument('-o', '--output', default=DEFAULT_FORMATTER,
                         choices=FORMATTERS_REGSITRY.keys())
-    parser.add_argument('-s', '--source', action='append')
     parsed_args = parser.parse_args()
     cli = SnagsbyCli()
     sys.exit(cli.main(vars(parsed_args)))

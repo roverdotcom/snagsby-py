@@ -15,7 +15,7 @@ class SnagsbyFormatter(object):
 
 class JsonFormatter(SnagsbyFormatter):
     def get_output(self):
-        return json.dumps(self.data)
+        return json.dumps(self.data, sort_keys=True)
 
 
 class EnvFormatter(SnagsbyFormatter):
