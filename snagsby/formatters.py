@@ -10,7 +10,7 @@ class SnagsbyFormatter(object):
         self.data = data
 
     def get_output(self):
-        raise NotImplementedError("Please implement the output method")
+        raise NotImplementedError("Please implement the get_output method")
 
 
 class JsonFormatter(SnagsbyFormatter):
