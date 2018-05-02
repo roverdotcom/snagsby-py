@@ -49,6 +49,11 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
     ],
+    entry_points={
+        'console_scripts': [
+            'snagsby=snagsby.cli:main'
+        ]
+    },
     test_suite='tests',
     tests_require=test_requirements,
 )
