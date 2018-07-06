@@ -4,8 +4,8 @@ import json
 
 from snagsby.cli import SnagsbyCli
 from snagsby.exceptions import InvalidFormatterError
-from snagsby.formatters import (FORMATTERS_REGSITRY, EnvFormatter,
-                                JsonFormatter, get_formatter)
+from snagsby.formatters import (EnvFormatter, JsonFormatter, get_formatter,
+                                registry)
 
 from . import TestCase
 
@@ -55,6 +55,6 @@ class EnvFactoryTests(TestCase):
             get_formatter('no-existy', {})
 
     def test_formatter_factory(self):
-        for formatter, cls in FORMATTERS_REGSITRY.items():
+        for formatter, cls in registry.items():
             formatter = get_formatter(formatter, {})
             self.assertIsInstance(formatter, cls)

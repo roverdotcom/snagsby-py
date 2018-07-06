@@ -1,17 +1,15 @@
 from __future__ import absolute_import
 
 import json
+import logging
+import os
 
 from mock import patch
+from testfixtures import LogCapture, log_capture
 
 from snagsby import sources
 
 from . import TestCase
-
-
-import logging
-from testfixtures import LogCapture
-from testfixtures import log_capture
 
 
 class SplitSourcesTests(TestCase):
@@ -71,6 +69,12 @@ class AWSSourceTests(TestCase):
         source = sources.AWSSource("s3://bucket/file.json")
         self.assertEqual(source.region_name, None)
 
+    @patch.dict(os.environ, {'AWS_DEFAULT_REGION': 'us-west-1'})
+    def test_session_gets_region(self):
+        source = sources.AWSSource("s3://bucket/file.json?region=us-east-2")
+        session = source.get_boto3_session()
+        self.assertEqual(session.region_name, 'us-east-2')
+
 
 class S3SourceTests(TestCase):
     source = "s3://my-bucket/my/file.json?region=us-west-1"
@@ -123,7 +127,7 @@ class SMSourceTests(TestCase):
     def test_get_raw_data_logs_sources_do_not_have_SecretString(self, l, mock):
         mock.return_value = {"SecretBinary": '{"TEST":"VALUE"}'}
         source = sources.SMSource("sm://some/key/path")
-        out = source.get_raw_data()
+        source.get_raw_data()
         l.check(
             ('snagsby.sources', 'DEBUG',
              'Response for key some/key/path does not contain SecretString'),
@@ -148,9 +152,10 @@ class ParseSourcesTests(TestCase):
 
     @log_capture()
     def test_logs_sources_that_are_not_supported(self, l):
-        out = sources.parse_sources("ftp://my-bucket/file.json")
+        source_types = ", ".join(sources.registry.get_names())
+        sources.parse_sources("ftp://my-bucket/file.json")
         l.check(('snagsby.sources', 'DEBUG',
-                 'Sources must start with s3:// or sm://'))
+                 'Sources must be one of: {}'.format(source_types)))
 
 
 class SanitizeTests(TestCase):

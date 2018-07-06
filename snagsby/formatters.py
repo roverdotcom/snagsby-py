@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import json
 
 from .exceptions import InvalidFormatterError
+from .registry import Registry
 
 
 class SnagsbyFormatter(object):
@@ -36,10 +37,10 @@ class EnvFormatter(SnagsbyFormatter):
         return "\n".join(sorted(lines))
 
 
-FORMATTERS_REGSITRY = {
-    'json': JsonFormatter,
-    'env': EnvFormatter,
-}
+registry = Registry()
+registry.register_handler('json', JsonFormatter)
+registry.register_handler('env', EnvFormatter)
+
 DEFAULT_FORMATTER = 'env'
 
 
@@ -48,6 +49,6 @@ def get_formatter(type, data):
     Formatter factory
     """
     try:
-        return FORMATTERS_REGSITRY[type](data)
+        return registry.get_handler(type)(data)
     except KeyError:
         raise InvalidFormatterError("Invalid formatter: {}".format(type))

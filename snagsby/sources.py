@@ -4,15 +4,22 @@ import json
 import logging
 import re
 
+import boto3
+import botocore
+from botocore.client import Config
+
+from .registry import Registry
+
 try:
     from urlparse import urlparse, parse_qs
 except ImportError:
     from urllib.parse import urlparse, parse_qs
 
+try:
+    from json.decoder import JSONDecodeError
+except ImportError:
+    JSONDecodeError = ValueError
 
-import boto3
-import botocore
-from botocore.client import Config
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +52,9 @@ def sanitize(obj):
     return out
 
 
-class AWSSource(object):
-    def __init__(self, url_str):
-        self.url = urlparse(url_str)
+class SnagsbySource(object):
+    def __init__(self, url):
+        self.url = urlparse(url)
 
     @property
     def options(self):
@@ -56,21 +63,31 @@ class AWSSource(object):
             for k, v in parse_qs(self.url.query).items()
         }
 
-    @property
-    def region_name(self):
-        return self.options.get('region')
+    def get_raw_data(self):
+        raise NotImplementedError("Please implement get_raw_data")
 
     def get_data(self):
         return sanitize(self.get_raw_data())
 
 
+class AWSSource(SnagsbySource):
+    @property
+    def region_name(self):
+        return self.options.get('region')
+
+    def get_boto3_session(self, opts=None):
+        if not opts:
+            opts = {}
+        if self.region_name:
+            opts['region_name'] = self.region_name
+
+        return boto3.Session(**opts)
+
+
 class SMSource(AWSSource):
     def get_sm_response(self):
         key = "{}{}".format(self.url.netloc, self.url.path)
-        client_opts = {}
-        if self.region_name:
-            client_opts['region_name'] = self.region_name
-        client = boto3.client('secretsmanager', **client_opts)
+        client = self.get_boto3_session().client('secretsmanager')
 
         try:
             return client.get_secret_value(SecretId=key)
@@ -78,9 +95,9 @@ class SMSource(AWSSource):
             if e.response['Error']['Code'] == 'ResourceNotFoundException':
                 logger.debug("The requested secret " + key + " was not found")
             elif e.response['Error']['Code'] == 'InvalidRequestException':
-                logger.error("The request was invalid due to:", e)
+                logger.error("The request was invalid due to: %s", e)
             elif e.response['Error']['Code'] == 'InvalidParameterException':
-                logger.error("The request had invalid params:", e)
+                logger.error("The request had invalid params: %s", e)
             return {}
 
     def get_raw_data(self):
@@ -88,9 +105,7 @@ class SMSource(AWSSource):
         if 'SecretString' in response:
             try:
                 return json.loads(response['SecretString'])
-            except ValueError as e:
-                return {}
-            except json.decoder.JSONDecodeError as e:
+            except JSONDecodeError:
                 return {}
         else:
             logger.debug('Response for key {}{} does not contain SecretString'.format(
@@ -110,18 +125,9 @@ class S3Source(AWSSource):
         return self.url.path.lstrip("/")
 
     def get_s3_object(self):
-        s3_opts = {
-            'config': Config(signature_version='s3v4'),
-        }
-
-        if self.region_name:
-            s3_opts['region_name'] = self.region_name
-
-        s3 = boto3.resource('s3', **s3_opts)
+        s3 = self.get_boto3_session().resource('s3')
         bucket = s3.Bucket(self.bucket)
-        obj = bucket.Object(self.key).get()
-
-        return obj
+        return bucket.Object(self.key).get()
 
     def get_s3_object_body(self):
         return self.get_s3_object()['Body'].read()
@@ -131,6 +137,20 @@ class S3Source(AWSSource):
         return json.loads(obj.decode())
 
 
+registry = Registry()
+registry.register_handler('s3', S3Source)
+registry.register_handler('sm', SMSource)
+
+
+def get_source(source):
+    source_type = urlparse(source).scheme
+    try:
+        return registry.get_handler(source_type)(source)
+    except KeyError:
+        logger.debug('Sources must be one of: {}'.format(
+            ", ".join(registry.get_names())))
+
+
 def _parse_sources_str(sources_str):
     return [
         source.lstrip().rstrip()
@@ -138,14 +158,9 @@ def _parse_sources_str(sources_str):
     ]
 
 
-def parse_source(source):
-    if not re.match(r's[m3]:\/\/', source):
-        logger.debug('Sources must start with s3:// or sm://')
-    elif source.startswith('s3://'):
-        return S3Source(source)
-    else:
-        return SMSource(source)
-
-
 def parse_sources(sources_str):
-    return list(filter(None, [parse_source(source) for source in _parse_sources_str(sources_str)]))
+    return [
+        get_source(source)
+        for source in _parse_sources_str(sources_str)
+        if source
+    ]
