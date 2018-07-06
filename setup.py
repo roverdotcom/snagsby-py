@@ -24,7 +24,8 @@ requirements = [
 test_requirements = [
     'mock>=1.0.1',
     'httpretty==0.8.14',
-    'testfixtures'
+    'testfixtures',
+    'pytest',
 ]
 
 setup(

@@ -1,6 +1,6 @@
 .PHONY :test
 test:
-	nosetests -v -s
+	pytest -v -s
 
 .PHONY :docker-test
 docker-test:

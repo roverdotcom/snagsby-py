@@ -60,6 +60,9 @@ class AWSSource(object):
     def region_name(self):
         return self.options.get('region')
 
+    def get_raw_data(self):
+        raise NotImplementedError("Please implement get_raw_data")
+
     def get_data(self):
         return sanitize(self.get_raw_data())
 
