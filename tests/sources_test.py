@@ -150,13 +150,6 @@ class ParseSourcesTests(TestCase):
         out = sources.parse_sources("sm://my/key/path")
         self.assertEqual(type(out[0]).__name__, 'SMSource')
 
-    @log_capture()
-    def test_logs_sources_that_are_not_supported(self, l):
-        source_types = ", ".join(sources.registry.get_names())
-        sources.parse_sources("ftp://my-bucket/file.json")
-        l.check(('snagsby.sources', 'DEBUG',
-                 'Sources must be one of: {}'.format(source_types)))
-
 
 class SanitizeTests(TestCase):
     def _sanitize(self, obj):

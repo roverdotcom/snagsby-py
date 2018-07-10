@@ -150,8 +150,7 @@ def get_source(source):
     try:
         return registry.get_handler(source_type)(source)
     except KeyError:
-        logger.debug('Sources must be one of: {}'.format(
-            ", ".join(registry.get_names())))
+        return None
 
 
 def _parse_sources_str(sources_str):
@@ -165,5 +164,4 @@ def parse_sources(sources_str):
     return [
         get_source(source)
         for source in _parse_sources_str(sources_str)
-        if source
     ]
