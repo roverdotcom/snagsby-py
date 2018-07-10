@@ -15,6 +15,9 @@ try:
 except ImportError:
     from urllib.parse import urlparse, parse_qs
 
+# Python 3 raises json.decoder.JSONDecodeError while python 2 raises ValueError
+# and doesn't provide json.decoder.JSONDecodeError.
+# This can be removed if and when python 2 is no longer supported.
 try:
     from json.decoder import JSONDecodeError
 except ImportError:
