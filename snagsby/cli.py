@@ -4,7 +4,8 @@ import argparse
 import sys
 
 from . import get as snagsby_get
-from .formatters import DEFAULT_FORMATTER, FORMATTERS_REGSITRY, get_formatter
+from .formatters import DEFAULT_FORMATTER, get_formatter
+from .formatters import registry as formatters_registry
 from .version import __version__
 
 
@@ -34,7 +35,7 @@ def main():
     parser.add_argument('-v', '--version', action='version',
                         version='snagsby-py: {}'.format(__version__))
     parser.add_argument('-o', '--output', default=DEFAULT_FORMATTER,
-                        choices=FORMATTERS_REGSITRY.keys())
+                        choices=formatters_registry.get_names())
     cli = SnagsbyCli()
     sys.exit(cli.main(vars(parser.parse_args())))
 

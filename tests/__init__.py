@@ -6,6 +6,7 @@ import unittest
 
 from httpretty import HTTPretty
 
+
 class TestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
