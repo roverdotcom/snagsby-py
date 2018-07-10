@@ -9,6 +9,7 @@ import botocore
 from botocore.client import Config
 
 from .registry import Registry
+from .exceptions import SnagsbySourceError
 
 try:
     from urlparse import urlparse, parse_qs
@@ -95,13 +96,11 @@ class SMSource(AWSSource):
         try:
             return client.get_secret_value(SecretId=key)
         except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == 'ResourceNotFoundException':
-                logger.debug("The requested secret " + key + " was not found")
-            elif e.response['Error']['Code'] == 'InvalidRequestException':
-                logger.error("The request was invalid due to: %s", e)
-            elif e.response['Error']['Code'] == 'InvalidParameterException':
-                logger.error("The request had invalid params: %s", e)
-            return {}
+            error = SnagsbySourceError(
+                e.message,
+                url=self.url.geturl(),
+                raw_exception=e)
+            raise error
 
     def get_raw_data(self):
         response = self.get_sm_response()
@@ -136,7 +135,15 @@ class S3Source(AWSSource):
         return self.get_s3_object()['Body'].read()
 
     def get_raw_data(self):
-        obj = self.get_s3_object_body()
+        try:
+            obj = self.get_s3_object_body()
+        except botocore.exceptions.ClientError as e:
+            error = SnagsbySourceError(
+                e.message,
+                url=self.url.geturl(),
+                raw_exception=e)
+            raise error
+
         return json.loads(obj.decode())
 
 
