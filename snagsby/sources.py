@@ -140,9 +140,32 @@ class S3Source(AWSSource):
         return json.loads(obj.decode())
 
 
+class SSMSource(AWSSource):
+    def normalize_key(self, path, key):
+        out = key[len(path):].lstrip('/').upper()
+        out = out.replace("/", "_")
+        return out
+
+    def get_raw_data(self):
+        client = self.get_boto3_session().client('ssm')
+        pager = client.get_paginator('get_parameters_by_path')
+        path = "/{}{}".format(self.url.netloc, self.url.path)
+        paged_resp = pager.paginate(
+            Path=path,
+            Recursive=True,
+            WithDecryption=True,
+        )
+        out = {}
+        for resp in paged_resp:
+            for item in resp['Parameters']:
+                out[self.normalize_key(path, item['Name'])] = item['Value']
+        return out
+
+
 registry = Registry()
 registry.register_handler('s3', S3Source)
 registry.register_handler('sm', SMSource)
+registry.register_handler('ssm', SSMSource)
 
 
 def get_source(source):
