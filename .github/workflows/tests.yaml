@@ -1,0 +1,35 @@
+name: Tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_version: ["2.7", "3.5"]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Test python ${{ matrix.python_version }}
+        run: make docker-test PYTHON_VERSION=${{ matrix.python_version }}
+
+  dist:
+    name: Build Dist
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: dist
+        run: make docker-dist
+      - name: Archive dist
+        uses: actions/upload-artifact@v2
+        with:
+          name: python-packages
+          path: |
+            dist
